@@ -1899,11 +1899,14 @@ done:
 }
 
 /** Helper: realigns the memory in chain->buffer so that misalign is 0. */
+//将misalign变为0，本质上是将数据从[misalign,misalign+off)移动到[0,off)
 static void
 evbuffer_chain_align(struct evbuffer_chain *chain)
 {
+    //非debug环境下，assert始终可以通过，否则在debug环境下，如果为fasle将打印文件名、行号、函数名以及判断语句
 	EVUTIL_ASSERT(!(chain->flags & EVBUFFER_IMMUTABLE));
 	EVUTIL_ASSERT(!(chain->flags & EVBUFFER_MEM_PINNED_ANY));
+    //memove考虑到内存重叠的情况，memcpy未考虑到此问题
 	memmove(chain->buffer, chain->buffer + chain->misalign, chain->off);
 	chain->misalign = 0;
 }

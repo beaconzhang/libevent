@@ -79,8 +79,10 @@ struct bufferevent;
 struct evbuffer_chain;
 struct evbuffer {
 	/** The first chain in this buffer's linked list of chains. */
+    //表头指针
 	struct evbuffer_chain *first;
 	/** The last chain in this buffer's linked list of chains. */
+    //表尾指针
 	struct evbuffer_chain *last;
 
 	/** Pointer to the next pointer pointing at the 'last_with_data' chain.
@@ -96,16 +98,20 @@ struct evbuffer {
 	 * is the first chain, or it is NULL, then the last_with_datap pointer
 	 * is &buf->first.
 	 */
+    //最后一个有数据的节点被next指向的指针的地址，如果没有数据，将为&buf->first
 	struct evbuffer_chain **last_with_datap;
 
 	/** Total amount of bytes stored in all chains.*/
+    //链表中所有的数据长度
 	size_t total_len;
 
 	/** Number of bytes we have added to the buffer since we last tried to
 	 * invoke callbacks. */
+    //最后一次调用回调函数后，新增的数据长度
 	size_t n_add_for_cb;
 	/** Number of bytes we have removed from the buffer since we last
 	 * tried to invoke callbacks. */
+    //最后一次调用回调函数后，删除的数据
 	size_t n_del_for_cb;
 
 #ifndef EVENT__DISABLE_THREAD_SUPPORT
@@ -114,6 +120,7 @@ struct evbuffer {
 #endif
 	/** True iff we should free the lock field when we free this
 	 * evbuffer. */
+    //释放evbuff时，是否要释放锁
 	unsigned own_lock : 1;
 	/** True iff we should not allow changes to the front of the buffer
 	 * (drains or prepends). */
@@ -169,14 +176,18 @@ typedef ev_off_t ev_misalign_t;
 
 /** A single item in an evbuffer. */
 struct evbuffer_chain {
+    //单链表形式，定义evbuffer链表节点,数据在buf是连续的，开始位置不一定是0，可能是misalign，实际长度是off
 	/** points to next buffer in the chain */
+    //链表指针
 	struct evbuffer_chain *next;
 
 	/** total allocation available in the buffer field. */
+    //分配的容量
 	size_t buffer_len;
 
 	/** unused space at the beginning of buffer or an offset into a
 	 * file for sendfile buffers. */
+    //
 	ev_misalign_t misalign;
 
 	/** Offset into buffer + misalign at which to start writing.
