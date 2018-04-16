@@ -59,24 +59,36 @@ extern "C" {
 
 /** A single evbuffer callback for an evbuffer. This function will be invoked
  * when bytes are added to or removed from the evbuffer. */
+//evbuf 回调，当在evbuffer中添加或者删除数据时
 struct evbuffer_cb_entry {
 	/** Structures to implement a doubly-linked queue of callbacks */
+    //宏展开为
+    //struct {
+    //  evbuffer_cb_entry* le_next;
+    //  evbuffer_cb_entry** le_prev;
+    //}next;
 	LIST_ENTRY(evbuffer_cb_entry) next;
 	/** The callback function to invoke when this callback is called.
 	    If EVBUFFER_CB_OBSOLETE is set in flags, the cb_obsolete field is
 	    valid; otherwise, cb_func is valid. */
+    //字段有效通过flags指示，发生回调时，将调用指定的回调函数
 	union {
+        //void (*evbuffer_cb_func)(struct evbuffer *buffer, const struct evbuffer_cb_info *info, void *arg);
 		evbuffer_cb_func cb_func;
 		evbuffer_cb cb_obsolete;
 	} cb;
 	/** Argument to pass to cb. */
+    //用户数据
 	void *cbarg;
 	/** Currently set flags on this callback. */
+    //指示使用哪一个回调函数
 	ev_uint32_t flags;
 };
-
+//应用层使用的buffer，evbuffer被封装在此里
 struct bufferevent;
+//真正装数据的block，在evbuffer中使用链表管理
 struct evbuffer_chain;
+//管理evbuffer_chain，回调函数，从属于bufferevent
 struct evbuffer {
 	/** The first chain in this buffer's linked list of chains. */
     //表头指针
@@ -98,7 +110,7 @@ struct evbuffer {
 	 * is the first chain, or it is NULL, then the last_with_datap pointer
 	 * is &buf->first.
 	 */
-    //最后一个有数据的节点被next指向的指针的地址，如果没有数据，将为&buf->first
+    //最后一个有数据的节点被next指向的指针的地址，如果没有数据，将为&buf->first,目的是是为了在写入数据时，迅速找到写入的位置
 	struct evbuffer_chain **last_with_datap;
 
 	/** Total amount of bytes stored in all chains.*/
@@ -113,9 +125,10 @@ struct evbuffer {
 	 * tried to invoke callbacks. */
     //最后一次调用回调函数后，删除的数据
 	size_t n_del_for_cb;
-
+    //锁的颗粒度是整个链表
 #ifndef EVENT__DISABLE_THREAD_SUPPORT
 	/** A lock used to mediate access to this buffer. */
+    //锁，用于并发
 	void *lock;
 #endif
 	/** True iff we should free the lock field when we free this
@@ -124,15 +137,18 @@ struct evbuffer {
 	unsigned own_lock : 1;
 	/** True iff we should not allow changes to the front of the buffer
 	 * (drains or prepends). */
+    //起始的buffer是否允许改动
 	unsigned freeze_start : 1;
 	/** True iff we should not allow changes to the end of the buffer
 	 * (appends) */
+    //结尾的buffer是否允许改动
 	unsigned freeze_end : 1;
 	/** True iff this evbuffer's callbacks are not invoked immediately
 	 * upon a change in the buffer, but instead are deferred to be invoked
 	 * from the event_base's loop.	Useful for preventing enormous stack
 	 * overflows when we have mutually recursive callbacks, and for
 	 * serializing callbacks in a single thread. */
+    //推迟buffer改变时的调用函数
 	unsigned deferred_cbs : 1;
 #ifdef _WIN32
 	/** True iff this buffer is set up for overlapped IO. */
@@ -142,23 +158,32 @@ struct evbuffer {
 	ev_uint32_t flags;
 
 	/** Used to implement deferred callbacks. */
+    //延迟调用，管理事件调用
 	struct event_base *cb_queue;
 
 	/** A reference count on this evbuffer.	 When the reference count
 	 * reaches 0, the buffer is destroyed.	Manipulated with
 	 * evbuffer_incref and evbuffer_decref_and_unlock and
 	 * evbuffer_free. */
+    //引用计数，如果为0，将释放此buffer
 	int refcnt;
 
 	/** A struct event_callback handle to make all of this buffer's callbacks
 	 * invoked from the event loop. */
+    //事件的回调函数结构体
 	struct event_callback deferred;
 
 	/** A doubly-linked-list of callback functions */
+    //读写的回调函数head
+    //宏展开为：
+    //struct evbuffer_cb_queue { 
+    //  evbuffer_cb_entry* lh_first;
+    //}callbacks;
 	LIST_HEAD(evbuffer_cb_queue, evbuffer_cb_entry) callbacks;
 
 	/** The parent bufferevent object this evbuffer belongs to.
 	 * NULL if the evbuffer stands alone. */
+    //所属的bufferevent
 	struct bufferevent *parent;
 };
 
@@ -187,15 +212,17 @@ struct evbuffer_chain {
 
 	/** unused space at the beginning of buffer or an offset into a
 	 * file for sendfile buffers. */
-    //
+    //开始未用的大小
 	ev_misalign_t misalign;
 
 	/** Offset into buffer + misalign at which to start writing.
 	 * In other words, the total number of bytes actually stored
 	 * in buffer. */
+    //真正的数据长度，在buf中的位置为[misalign,misalign+off);
 	size_t off;
 
 	/** Set if special handling is required for this chain */
+    //设置buf指向的内容的属性
 	unsigned flags;
 #define EVBUFFER_FILESEGMENT	0x0001  /**< A chain used for a file segment */
 #define EVBUFFER_SENDFILE	0x0002	/**< a chain used with sendfile */
@@ -213,6 +240,7 @@ struct evbuffer_chain {
 #define EVBUFFER_MULTICAST	0x0080
 
 	/** number of references to this chain */
+    //引用计数器
 	int refcnt;
 
 	/** Usually points to the read-write memory belonging to this
@@ -221,12 +249,15 @@ struct evbuffer_chain {
 	 * EVBUFFER_IMMUTABLE will be set in flags.  For sendfile, it
 	 * may point to NULL.
 	 */
+    //指向内存的开始，或者在其他情况下为NULL
 	unsigned char *buffer;
 };
 
 /** callback for a reference chain; lets us know what to do with it when
  * we're done with it. Lives at the end of an evbuffer_chain with the
  * EVBUFFER_REFERENCE flag set */
+//typedef void (*evbuffer_ref_cleanup_cb)(const void *data,
+//    size_t datalen, void *extra);
 struct evbuffer_chain_reference {
 	evbuffer_ref_cleanup_cb cleanupfn;
 	void *extra;
@@ -311,13 +342,17 @@ struct evbuffer_multicast_parent {
 	} while (0)
 
 /** Increase the reference count of buf by one. */
+//增加evbuffer的引用计数
 void evbuffer_incref_(struct evbuffer *buf);
 /** Increase the reference count of buf by one and acquire the lock. */
+//增加引用计数并且获取锁
 void evbuffer_incref_and_lock_(struct evbuffer *buf);
 /** Pin a single buffer chain using a given flag. A pinned chunk may not be
  * moved or freed until it is unpinned. */
+//操作evbuffer_chain，标记为flag
 void evbuffer_chain_pin_(struct evbuffer_chain *chain, unsigned flag);
 /** Unpin a single buffer chain using a given flag. */
+//操作evbuffer_chain，去掉标记flag
 void evbuffer_chain_unpin_(struct evbuffer_chain *chain, unsigned flag);
 /** As evbuffer_free, but requires that we hold a lock on the buffer, and
  * releases the lock before freeing it and the buffer. */

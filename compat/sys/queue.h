@@ -144,7 +144,10 @@ struct name {								\
 
 #define LIST_HEAD_INITIALIZER(head)					\
 	{ NULL }
-
+//存放在结构体中，使用方法为
+//struct structname{
+//  LIST_ENTRY(structname) field;
+//};
 #define LIST_ENTRY(type)						\
 struct {								\
 	struct type *le_next;	/* next element */			\

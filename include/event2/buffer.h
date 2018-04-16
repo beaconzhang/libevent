@@ -476,6 +476,7 @@ int evbuffer_add_buffer_reference(struct evbuffer *outbuf,
 
    @see evbuffer_add_reference()
  */
+//通过引用添加到evbuffer时，将会调用此回调函数
 typedef void (*evbuffer_ref_cleanup_cb)(const void *data,
     size_t datalen, void *extra);
 
@@ -888,6 +889,13 @@ struct evbuffer_cb_info {
     @param info a structure describing how the buffer changed.
     @param arg a pointer to user data
 */
+//1、当向buffer中添加或者删除数据时，执行回调函数
+//2、一个ebbuffer可能会有多个回调函数，执行顺序是未定义的
+//3、一个回调函数可能会添加更多的回调函数，可能从链表中删除自己，或者向buffer中添加或者删除数据，不太可能移除别的回调函数
+//4、从buffer或者其他buffer中添加或者删除数据，可能会导致回调死循环
+//buffer:数据有改动的evbuffer
+//info:指示buffer数据被改动的信息
+//arg:指向用户数据
 typedef void (*evbuffer_cb_func)(struct evbuffer *buffer, const struct evbuffer_cb_info *info, void *arg);
 
 struct evbuffer_cb_entry;

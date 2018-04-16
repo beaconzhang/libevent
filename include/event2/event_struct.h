@@ -68,6 +68,10 @@ extern "C" {
 /* Fix so that people don't have to run with <sys/queue.h> */
 #ifndef TAILQ_ENTRY
 #define EVENT_DEFINED_TQENTRY_
+//使用方法为:
+//struct structname{
+//  TAILQ_ENTRY(structname) field;
+//};
 #define TAILQ_ENTRY(type)						\
 struct {								\
 	struct type *tqe_next;	/* next element */			\
@@ -105,8 +109,11 @@ struct name {								\
 struct event;
 
 struct event_callback {
+    //队列，evcb_active_next.tqe_next指向下一个元素，evcb_active_next.tqe_prev指向前一个元素指向自己的指针
 	TAILQ_ENTRY(event_callback) evcb_active_next;
+    //标识使用哪一个回调函数
 	short evcb_flags;
+    //优先级
 	ev_uint8_t evcb_pri;	/* smaller numbers are higher priority */
 	ev_uint8_t evcb_closure;
 	/* allows us to adopt for different types of events */
